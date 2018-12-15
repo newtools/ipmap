@@ -5,6 +5,8 @@ import (
 	"testing"
 )
 
+type ipv4 [16]byte
+
 func TestIPMapSet(t *testing.T) {
 	t.Parallel()
 	ipMap := NewIPMap(false)
@@ -65,20 +67,17 @@ func BenchmarkIPSet(b *testing.B) {
 	b.ReportAllocs()
 	b.StopTimer()
 	var ipArr []net.IP
-	// 1.0.0.0.1
-	var ipBits uint32 = 16777217
+	// 0000.0000.0000.0000.0000.0000.0000.0000.0000.0000
+	var ar [8]uint16
+	var cur int
 	for n := 0; n < b.N; n++ {
-		one := uint8((ipBits & 0xff000000) >> 24)
-		two := uint8((ipBits & 0xff0000) >> 16)
-		three := uint8((ipBits & 0xff00) >> 8)
-		four := uint8(ipBits & 0xff)
-		ipArr = append(ipArr, net.IPv4(one, two, three, four))
-		ipBits++
+		cur = ip6Add(&ar, cur)
+		ip := IPv6(ar[0], ar[1], ar[2], ar[3], ar[4], ar[5], ar[6], ar[7])
+		ipArr = append(ipArr, ip)
 	}
 	ipMap := NewIPMap(false)
 	b.ResetTimer()
 	b.StartTimer()
-
 	for n := 0; n < b.N; n++ {
 		ipMap.Set(ipArr[n])
 	}
@@ -88,17 +87,15 @@ func BenchmarkIPUnset(b *testing.B) {
 	b.ReportAllocs()
 	b.StopTimer()
 	var ipArr []net.IP
-	// 1.0.0.0.1
-	var ipBits uint32 = 16777217
 	ipMap := NewIPMap(false)
+	// 0000.0000.0000.0000.0000.0000.0000.0000.0000.0000
+	var ar [8]uint16
+	var cur int
 	for n := 0; n < b.N; n++ {
-		one := uint8((ipBits & 0xff000000) >> 24)
-		two := uint8((ipBits & 0xff0000) >> 16)
-		three := uint8((ipBits & 0xff00) >> 8)
-		four := uint8(ipBits & 0xff)
-		ipArr = append(ipArr, net.IPv4(one, two, three, four))
-		ipBits++
-		ipMap.Set(ipArr[n])
+		cur = ip6Add(&ar, cur)
+		ip := IPv6(ar[0], ar[1], ar[2], ar[3], ar[4], ar[5], ar[6], ar[7])
+		ipArr = append(ipArr, ip)
+		ipMap.Set(ip)
 	}
 	b.ResetTimer()
 	b.StartTimer()
@@ -111,17 +108,15 @@ func BenchmarkIPIsSet(b *testing.B) {
 	b.ReportAllocs()
 	b.StopTimer()
 	var ipArr []net.IP
-	// 1.0.0.0.1
-	var ipBits uint32 = 16777217
 	ipMap := NewIPMap(false)
+	// 0000.0000.0000.0000.0000.0000.0000.0000.0000.0000
+	var ar [8]uint16
+	var cur int
 	for n := 0; n < b.N; n++ {
-		one := uint8((ipBits & 0xff000000) >> 24)
-		two := uint8((ipBits & 0xff0000) >> 16)
-		three := uint8((ipBits & 0xff00) >> 8)
-		four := uint8(ipBits & 0xff)
-		ipArr = append(ipArr, net.IPv4(one, two, three, four))
-		ipBits++
-		ipMap.Set(ipArr[n])
+		cur = ip6Add(&ar, cur)
+		ip := IPv6(ar[0], ar[1], ar[2], ar[3], ar[4], ar[5], ar[6], ar[7])
+		ipArr = append(ipArr, ip)
+		ipMap.Set(ip)
 	}
 	b.ResetTimer()
 	b.StartTimer()
@@ -136,15 +131,13 @@ func BenchmarkIPSetv4Only(b *testing.B) {
 	b.ReportAllocs()
 	b.StopTimer()
 	var ipArr []net.IP
-	// 1.0.0.0.1
-	var ipBits uint32 = 16777217
+	// 0.0.0.0
+	var ar [4]uint8
+	var cur int
 	for n := 0; n < b.N; n++ {
-		one := uint8((ipBits & 0xff000000) >> 24)
-		two := uint8((ipBits & 0xff0000) >> 16)
-		three := uint8((ipBits & 0xff00) >> 8)
-		four := uint8(ipBits & 0xff)
-		ipArr = append(ipArr, net.IPv4(one, two, three, four))
-		ipBits++
+		cur = ip4Add(&ar, cur)
+		ip := net.IPv4(ar[0], ar[1], ar[2], ar[3])
+		ipArr = append(ipArr, ip)
 	}
 	ipMap := NewIPMap(true)
 	b.ResetTimer()
@@ -159,17 +152,15 @@ func BenchmarkIPUnsetv4Only(b *testing.B) {
 	b.ReportAllocs()
 	b.StopTimer()
 	var ipArr []net.IP
-	// 1.0.0.0.1
-	var ipBits uint32 = 16777217
 	ipMap := NewIPMap(true)
+	// 0.0.0.0
+	var ar [4]uint8
+	var cur int
 	for n := 0; n < b.N; n++ {
-		one := uint8((ipBits & 0xff000000) >> 24)
-		two := uint8((ipBits & 0xff0000) >> 16)
-		three := uint8((ipBits & 0xff00) >> 8)
-		four := uint8(ipBits & 0xff)
-		ipArr = append(ipArr, net.IPv4(one, two, three, four))
-		ipBits++
-		ipMap.Set(ipArr[n])
+		cur = ip4Add(&ar, cur)
+		ip := net.IPv4(ar[0], ar[1], ar[2], ar[3])
+		ipArr = append(ipArr, ip)
+		ipMap.Set(ip)
 	}
 	b.ResetTimer()
 	b.StartTimer()
@@ -182,17 +173,15 @@ func BenchmarkIPIsSetv4Only(b *testing.B) {
 	b.ReportAllocs()
 	b.StopTimer()
 	var ipArr []net.IP
-	// 1.0.0.0.1
-	var ipBits uint32 = 16777217
 	ipMap := NewIPMap(true)
+	// 0.0.0.0
+	var ar [4]uint8
+	var cur int
 	for n := 0; n < b.N; n++ {
-		one := uint8((ipBits & 0xff000000) >> 24)
-		two := uint8((ipBits & 0xff0000) >> 16)
-		three := uint8((ipBits & 0xff00) >> 8)
-		four := uint8(ipBits & 0xff)
-		ipArr = append(ipArr, net.IPv4(one, two, three, four))
-		ipBits++
-		ipMap.Set(ipArr[n])
+		cur = ip4Add(&ar, cur)
+		ip := net.IPv4(ar[0], ar[1], ar[2], ar[3])
+		ipArr = append(ipArr, ip)
+		ipMap.Set(ip)
 	}
 	b.ResetTimer()
 	b.StartTimer()
@@ -201,4 +190,112 @@ func BenchmarkIPIsSetv4Only(b *testing.B) {
 			b.Fatalf("is set reported %s as unset, when it was set", ipArr[n])
 		}
 	}
+}
+
+func BenchmarkIP4SetOnMap(b *testing.B) {
+	b.ReportAllocs()
+	b.StopTimer()
+	var ipArr []ipv4
+	// 0.0.0.0
+	var ar [4]uint8
+	var cur int
+	for n := 0; n < b.N; n++ {
+		cur = ip4Add(&ar, cur)
+		ipArr = append(ipArr, ipv4{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ar[0], ar[1], ar[2], ar[3]})
+	}
+	ipMap := make(map[ipv4]struct{})
+	b.ResetTimer()
+	b.StartTimer()
+
+	for n := 0; n < b.N; n++ {
+		ipMap[ipArr[n]] = struct{}{}
+	}
+}
+
+func BenchmarkIP4IsSetOnMap(b *testing.B) {
+	b.ReportAllocs()
+	b.StopTimer()
+	var ipArr []ipv4
+	ipMap := make(map[ipv4]struct{})
+	// 0.0.0.0
+	var ar [4]uint8
+	var cur int
+	for n := 0; n < b.N; n++ {
+		cur = ip4Add(&ar, cur)
+		ipv4t := ipv4{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ar[0], ar[1], ar[2], ar[3]}
+		ipArr = append(ipArr, ipv4t)
+		ipMap[ipv4t] = struct{}{}
+	}
+
+	b.ResetTimer()
+	b.StartTimer()
+	for n := 0; n < b.N; n++ {
+		if _, ok := ipMap[ipArr[n]]; !ok {
+			b.Fatalf("is set reported %s as unset, when it was set", ipArr[n])
+		}
+	}
+}
+
+func ip4Add(ip *[4]uint8, cur int) int {
+	ipC := *ip
+	var set bool
+	l := 4
+	for t := l - 1; t > cur; t-- {
+		if ipC[t] < 255 {
+			ipC[t]++
+			set = true
+			break
+		}
+	}
+	if !set {
+		if ipC[cur] == 255 {
+			cur++
+		}
+		if cur == l {
+			cur = 0
+			ipC[0] = 0
+		}
+		ipC[cur]++
+		for i := cur + 1; i < l; i++ {
+			ipC[i] = 0
+		}
+	}
+	*ip = ipC
+	return cur
+}
+
+func ip6Add(ip *[8]uint16, cur int) int {
+	ipC := *ip
+	var set bool
+	l := 8
+	for t := l - 1; t > cur; t-- {
+		if ipC[t] < 65535 {
+			ipC[t]++
+			set = true
+			break
+		}
+	}
+	if !set {
+		if ipC[cur] == 65535 {
+			cur++
+		}
+		if cur == l {
+			cur = 0
+			ipC[0] = 0
+		}
+		ipC[cur]++
+		for i := cur + 1; i < l; i++ {
+			ipC[i] = 0
+		}
+	}
+	*ip = ipC
+	return cur
+}
+
+func incrementUint16(v *uint16) bool {
+	if *v < 65535 {
+		*v++
+		return true
+	}
+	return false
 }

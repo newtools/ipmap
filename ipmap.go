@@ -1,9 +1,6 @@
 package ipmap
 
-import (
-	"math/big"
-	"net"
-)
+import "net"
 
 // IPv6 returns a new IPv6 address
 func IPv6(a, b, c, d, e, f, g, h uint16) net.IP {
@@ -29,15 +26,18 @@ func IPv6(a, b, c, d, e, f, g, h uint16) net.IP {
 
 // ipMap is a lookup table for ip addresses
 type ipMap struct {
-	bitMap            big.Int
-	length            uint16
-	subAddrs          []*ipMap
+	*ipNode
 	startingIndex     uint8
 	startingDecrement uint8
 }
 
-// NewIPMap creates a new IPMap. Regular contruction can work, except if you only want to deal
-// with IPv4 addresses. You can pass a boolean to this method to indicate to change the map
+type ipNode struct {
+	bitMap   BitMap
+	length   uint16
+	subAddrs []*ipNode
+}
+
+// NewIPMap creates a new IPMap. You can pass a boolean to this method to indicate to change the map
 // alogorithm to optimize for IPv4 only (IPv6 only has not available optimization, so you needn't
 // worry about that). This should create faster setting and getting times.
 func NewIPMap(ipv4Only bool) *ipMap {
@@ -50,6 +50,7 @@ func NewIPMap(ipv4Only bool) *ipMap {
 	return &ipMap{
 		startingIndex:     startingIndex,
 		startingDecrement: startingDecrement,
+		ipNode:            &ipNode{},
 	}
 }
 
@@ -58,20 +59,20 @@ func (ipt *ipMap) Set(ip net.IP) {
 	ipt.set(ip, ipt.startingIndex, ipt.startingDecrement)
 }
 
-func (ipt *ipMap) set(ip []byte, baseIdx, dec uint8) {
+func (ipt *ipNode) set(ip []byte, baseIdx, dec uint8) {
 	if dec >= 0 {
-		ipt.bitMap.SetBit(&ipt.bitMap, int(ip[baseIdx]), 1)
+		ipt.bitMap.Set(uint(ip[baseIdx]), 1)
 		if dec > 0 {
 			plusOne := baseIdx + 1
 			idx := ip[plusOne]
 			ipIL := uint16(idx) + 1
 			if ipIL > ipt.length {
-				sl := make([]*ipMap, ipIL-ipt.length)
+				sl := make([]*ipNode, ipIL-ipt.length)
 				ipt.subAddrs = append(ipt.subAddrs, sl...)
 				ipt.length = ipIL
 			}
 			if ipt.subAddrs[idx] == nil {
-				ipt.subAddrs[idx] = new(ipMap)
+				ipt.subAddrs[idx] = &ipNode{}
 			}
 			ipt.subAddrs[idx].set(ip, plusOne, dec-1)
 		}
@@ -83,9 +84,9 @@ func (ipt *ipMap) IsSet(ip net.IP) bool {
 	return ipt.isSet(ip, ipt.startingIndex, ipt.startingDecrement)
 }
 
-func (ipt *ipMap) isSet(ip []byte, baseIdx, dec uint8) bool {
+func (ipt *ipNode) isSet(ip []byte, baseIdx, dec uint8) bool {
 	if dec >= 0 {
-		if ipt.bitMap.Bit(int(ip[baseIdx])) == 1 {
+		if ipt.bitMap.IsSet(uint(ip[baseIdx])) {
 			if dec > 0 {
 				plusOne := baseIdx + 1
 				idx := ip[plusOne]
@@ -107,10 +108,10 @@ func (ipt *ipMap) Unset(ip net.IP) bool {
 	return unset
 }
 
-func (ipt *ipMap) unset(ip []byte, baseIdx, dec uint8) (bool, bool) {
+func (ipt *ipNode) unset(ip []byte, baseIdx, dec uint8) (bool, bool) {
 	if dec >= 0 {
-		bit := int(ip[baseIdx])
-		if ipt.bitMap.Bit(bit) == 1 {
+		bit := uint(ip[baseIdx])
+		if ipt.bitMap.IsSet(bit) {
 			if dec > 0 {
 				plusOne := baseIdx + 1
 				idx := ip[plusOne]
@@ -139,11 +140,11 @@ func (ipt *ipMap) unset(ip []byte, baseIdx, dec uint8) (bool, bool) {
 					}
 				}
 				if amEmpty {
-					ipt.bitMap.SetBit(&ipt.bitMap, bit, 0)
+					ipt.bitMap.Set(bit, 0)
 				}
 				return true, amEmpty
 			}
-			ipt.bitMap.SetBit(&ipt.bitMap, bit, 0)
+			ipt.bitMap.Set(bit, 0)
 			return true, true
 		}
 	}
